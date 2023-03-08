@@ -1,94 +1,19 @@
 import os
 from typing import Union
 from pathlib import Path
-from dataclasses import dataclass
 
 import zarr
 import s3fs
 import rioxarray
 import numpy as np
 import xarray as xr
-import pandas as pd
+from dotenv import load_dotenv
 from google.cloud import storage
 
+from processing.utils.geotiff_data import GeoTiffData
+
 # Load .env variables
-from dotenv import load_dotenv
 load_dotenv()
-
-
-@dataclass
-class GeoTiffData:
-    dataset: str
-    group: str
-
-    def variable(self):
-        return {'historic': 'stocks', 'recent': 'stocks',
-                'stocks': 'stocks', 'concentration': 'concentration'}[self.group]
-
-    def local_path(self):
-        return {'global': '../data/processed/raster_data/global-dataset.zarr',
-                'experimental': '../data/processed/raster_data/experimental-dataset.zarr'}[self.dataset]
-
-    def s3_path(self):
-        return {'global': 's3://soils-revealed/global-dataset.zarr',
-                'experimental': 's3://soils-revealed/experimental-dataset.zarr'}[self.dataset]
-
-    def gcp_path(self):
-        return {'global': {'historic': 'SOC_maps/Historic/', 'recent': 'SOC_maps/Recent_Nov/'},
-                'experimental': {'stocks': 'SOC_maps/SOC_stock_EJSS/',
-                                 'concentration': 'SOC_maps/SOC_concentration2020/'}
-                }[self.dataset][self.group]
-
-    def file_prefix(self):
-        return {'global': {'historic': 'SOCS_', 'recent': 'SOC_'},
-                'experimental': {'stocks': 'cstock030_', 'concentration': 'SOC_'}
-                }[self.dataset][self.group]
-
-    def file_infix(self):
-        return {'global': {'historic': 'cm_year_', 'recent': '_4326.tif'},
-                'experimental': {'stocks': '', 'concentration': '_q0.5_D'}
-                }[self.dataset][self.group]
-
-    def file_suffix(self):
-        return {'global': {'historic': '_10km.tif', 'recent': ''},
-                'experimental': {'stocks': '_Q0.5.tif', 'concentration': '.tif'}
-                }[self.dataset][self.group]
-
-    def years(self):
-        return {'global': {'historic': ['NoLU', '2010AD'],
-                           'recent': np.arange(2000, 2019, 1).astype(str)},
-                'experimental': {'stocks': np.arange(1982, 2018, 1).astype(str),
-                                 'concentration': np.arange(1982, 2018, 1).astype(str)}
-                }[self.dataset][self.group]
-
-    def times(self):
-        return {'global': {'historic': ['NoLU', '2010AD'],
-                           'recent': pd.date_range("2000", "2019", freq='A-DEC', name="time")},
-                'experimental': {'stocks': pd.date_range('1982', '2018', freq='A-DEC', name="time"),
-                                 'concentration': pd.date_range('1982', '2018', freq='A-DEC', name="time")}
-                }[self.dataset][self.group]
-
-    def depths(self):
-        return {'global': {'historic': {'0-30': '0_30', '0-100': '0_100', '0-200': '0_200'},
-                           'recent': {'0-30': ''}},
-                'experimental': {'stocks': {'0-30': '_030cm'},
-                                 'concentration': {'0-5': '2.5', '5-15': '10', '15-30': '22.5',
-                                                   '30-60': '45', '60-100': '80', '100-200': '150'}}
-                }[self.dataset][self.group]
-
-    def no_data(self):
-        return {'global': {'historic': -32767.0, 'recent': None},
-                'experimental': {'stocks': -32768., 'concentration': 0}
-                }[self.dataset][self.group]
-
-    def get_file_name(self, year_name, depth_name):
-        if self.group == 'historic':
-            file_name = self.file_prefix() + depth_name + self.file_infix() + year_name + self.file_suffix()
-        elif self.group == 'recent':
-            file_name = self.file_prefix() + year_name + self.file_suffix()
-        else:
-            file_name = self.file_prefix() + year_name + self.file_infix() + depth_name + self.file_suffix()
-        return file_name
 
 
 class GCSGeoTiff:
