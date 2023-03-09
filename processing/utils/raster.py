@@ -10,7 +10,7 @@ import xarray as xr
 from dotenv import load_dotenv
 from google.cloud import storage
 
-from processing.utils.geotiff_data import GeoTiffData
+from processing.utils.data import RasterData
 
 # Load .env variables
 load_dotenv()
@@ -46,7 +46,7 @@ class GeoTiffConverter:
     s3_access_key_id = os.getenv("S3_ACCESS_KEY_ID")
     s3_secret_access_key = os.getenv("S3_SECRET_ACCESS_KEY")
 
-    def __init__(self, geotiff_obj: GeoTiffData, save_in_s3: bool = False):
+    def __init__(self, geotiff_obj: RasterData, save_in_s3: bool = False):
         self.geotiff_obj = geotiff_obj
         self.save_in_s3 = save_in_s3
         if save_in_s3:
@@ -98,3 +98,31 @@ class GeoTiffConverter:
             print(f"{self.geotiff_obj.s3_path() if self.save_in_s3 else self.geotiff_obj.local_path()} is consolidated? {c}")
             with zarr.open(store, mode='r') as z:
                 print(z.tree())
+
+
+class ZarrData:
+    s3_access_key_id = os.getenv("S3_ACCESS_KEY_ID")
+    s3_secret_access_key = os.getenv("S3_SECRET_ACCESS_KEY")
+
+    def __init__(self, raster_obj: RasterData, in_s3: bool = False):
+        self.raster_obj = raster_obj
+        self.in_s3 = in_s3
+
+    def read_as_xarray(self):
+        if self.in_s3:
+            # Initilize the S3 file system
+            s3 = s3fs.S3FileSystem(key=self.s3_access_key_id, secret=self.s3_secret_access_key)
+            store = s3fs.S3Map(root=self.raster_obj.s3_path(), s3=s3, check=False)
+            # Read Zarr file
+            ds = xr.open_zarr(store=store, group=self.raster_obj.group, consolidated=True)
+            # Change dimension name
+            if self.raster_obj.group == 'concentration':
+                ds = ds.rename({'depht': 'depth'})
+        else:
+            # Read Zarr file
+            ds = xr.open_zarr(store=self.raster_obj.local_path(), group=self.raster_obj.group, consolidated=True)
+
+        # Change coordinates names
+        ds = ds.rename({'x': 'lon', 'y': 'lat'})
+
+        return ds

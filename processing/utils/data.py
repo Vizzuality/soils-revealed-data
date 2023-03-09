@@ -1,11 +1,28 @@
+import os
+from typing import Dict, List
 from dataclasses import dataclass
 
 import numpy as np
 import pandas as pd
+import geopandas as gpd
+from tqdm import tqdm
 
 
 @dataclass
-class GeoTiffData:
+class VectorData:
+    path: str
+    files: List
+
+    def read_data(self) -> Dict[str, gpd.GeoDataFrame]:
+        dataframes: Dict[str, pd.DataFrame] = {}
+        for file in tqdm(self.files):
+            file_path = os.path.join(self.path, file)
+            gdf = gpd.read_file(file_path)
+            dataframes[file.split('.')[0]] = gdf
+        return dataframes
+
+@dataclass
+class RasterData:
     dataset: str
     group: str
 
@@ -152,6 +169,39 @@ class GeoTiffData:
                 'scenarios': {'2018': '00', '2023': '05', '2028': '10', '2033': '15', '2038': '20'},
                 'experimental': {}}[self.dataset][year_name]
 
+    def iso(self, year_name: str):
+        return {'global': None,
+                'scenarios': None,
+                'experimental': 'ARG'}[self.dataset]
+
+    def n_binds(self):
+        return {'global': {'historic': [40, 40, 60], 'recent': [10]},
+                'scenarios': {'crop_I': [30],
+                              'crop_MG': [30],
+                              'crop_MGI': [30],
+                              'grass_part': [30],
+                              'grass_full': [30],
+                              'rewilding': [60],
+                              'degradation_ForestToGrass': [51],
+                              'degradation_ForestToCrop': [51],
+                              'degradation_NoDeforestation': [51]},
+                'experimental': {'stocks': [80], 'concentration': [20]}
+                }[self.dataset][self.group]
+
+    def bind_ranges(self):
+        return {'global': {'historic': [[-20, 20], [-40, 40], [-60, 60]], 'recent': [[-50, 50]]},
+                'scenarios': {'crop_I': [[0, 30]],
+                              'crop_MG': [[0, 30]],
+                              'crop_MGI': [[0, 30]],
+                              'grass_part': [[0, 30]],
+                              'grass_full': [[0, 30]],
+                              'rewilding': [[-30, 30]],
+                              'degradation_ForestToGrass': [[-50, 1]],
+                              'degradation_ForestToCrop': [[-50, 1]],
+                              'degradation_NoDeforestation': [[-50, 1]]},
+                'experimental': {'stocks': [[-50, 50]], 'concentration': [[-10, 10]]}
+                }[self.dataset][self.group]
+
     def get_file_name(self, year_name, depth_name):
         if self.dataset == 'scenarios':
             file_name = self.file_prefix() + self.group + self.file_infix() + self.delta_years(year_name) + self.file_suffix()
@@ -162,3 +212,5 @@ class GeoTiffData:
         else:
             file_name = self.file_prefix() + year_name + self.file_infix() + depth_name + self.file_suffix()
         return file_name
+
+
