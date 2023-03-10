@@ -19,7 +19,7 @@ if __name__ == '__main__':
     vector_data = vector.read_data()
 
     for dataset in datasets:
-        print(dataset)
+        print(f"{dataset.title()}")
         for group in groups[dataset]:
             print(group)
             # Read raster data
@@ -30,12 +30,17 @@ if __name__ == '__main__':
 
             # Rasterize vector data
             print("Rasterizing vector data!")
-            zonal_statistics = ZonalStatistics(raster_data, vector_data)
+            zonal_statistics = ZonalStatistics(raster_data, vector_data, raster_metadata)
             zonal_statistics.rasterize_vector_data()
 
             # Compute change histogram values
             print("Compute change values!")
-            change_data = zonal_statistics.compute_change(raster_metadata)
+            change_data = zonal_statistics.compute_change()
+
+            # Compute time series values
+            print("Compute time series values!")
+            time_series_data = zonal_statistics.compute_time_series()
+            print(time_series_data)
 
 
 
