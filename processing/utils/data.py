@@ -21,6 +21,7 @@ class VectorData:
             dataframes[file.split('.')[0]] = gdf
         return dataframes
 
+
 @dataclass
 class RasterData:
     dataset: str
@@ -169,7 +170,7 @@ class RasterData:
                 'scenarios': {'2018': '00', '2023': '05', '2028': '10', '2033': '15', '2038': '20'},
                 'experimental': {}}[self.dataset][year_name]
 
-    def iso(self, year_name: str):
+    def iso(self):
         return {'global': None,
                 'scenarios': None,
                 'experimental': 'ARG'}[self.dataset]

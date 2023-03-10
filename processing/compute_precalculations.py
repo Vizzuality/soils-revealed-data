@@ -24,16 +24,21 @@ if __name__ == '__main__':
             print(group)
             # Read raster data
             print("Reading raster data!")
-            raster = RasterData(dataset, group)
-            zarr_data = ZarrData(raster)
+            raster_metadata = RasterData(dataset, group)
+            zarr_data = ZarrData(raster_metadata)
             raster_data = zarr_data.read_as_xarray()
 
             # Rasterize vector data
             print("Rasterizing vector data!")
             zonal_statistics = ZonalStatistics(raster_data, vector_data)
             zonal_statistics.rasterize_vector_data()
-            print(zonal_statistics.raster_data)
-            print('Test')
+
+            # Compute change histogram values
+            print("Compute change values!")
+            change_data = zonal_statistics.compute_change(raster_metadata)
+
+
+
 
 
 
