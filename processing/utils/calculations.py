@@ -34,11 +34,13 @@ class ZonalStatistics:
 
         return self.raster_data
 
-    def compute_change(self, index_column_name: str = 'index') -> Dict[str, pd.DataFrame]:
+    def compute(self, index_column_name: str = 'index', data_type: str = 'time_series') -> Dict[str, pd.DataFrame]:
+        assert data_type in ['change', 'time_series'], "data_type must be 'change' or 'time_series'"
+
         df_list = []
-        change_data = {}
+        data = {}
         for geom_name, gdf in self.vector_data.items():
-            print(f"computing change for vector data -> {geom_name}")
+            print(f"computing {data_type} for vector data -> {geom_name}")
             if self.raster_metadata.iso() and ('political' in geom_name):
                 gdf = gdf[gdf['gid_0'] == self.raster_metadata.iso()]
 
@@ -54,108 +56,79 @@ class ZonalStatistics:
                 ds_index = ds_index.where(ds_index[geom_name].isin(index))
 
                 for n, depth in enumerate(depths):
+                    values = {"index": index}
                     try:
-                        # Get difference between two dates
-                        diff = ds_index.loc[dict(time=times[-1], depth=depth)] - \
-                               ds_index.loc[dict(time=times[0], depth=depth)]
-
-                        # Get counts and binds of the histogram
-                        if (self.raster_metadata.dataset == 'experimental') and (self.raster_metadata.group == 'stocks'):
-                            diff = diff[self.raster_metadata.variable()] / 10.
-                        else:
-                            diff = diff[self.raster_metadata.variable()]
-
-                        if len(depths) == len(self.raster_metadata.n_binds()):
-                            h, bins = da.histogram(diff, bins=self.raster_metadata.n_binds()[n],
-                                                   range=self.raster_metadata.bind_ranges()[n])
-                        else:
-                            h, bins = da.histogram(diff, bins=self.raster_metadata.n_binds()[0],
-                                                   range=self.raster_metadata.bind_ranges()[0])
-
-                        # Get values
-                        sum_diff = diff.sum().values
-                        count_diff = diff.count().values
-                        mean_diff = sum_diff / count_diff
-
-                        # Save values
-                        df_list.append({
-                            "index": index,
-                            "counts": h.compute().tolist(),
-                            "bins": bins.tolist(),
-                            "sum_diff": sum_diff,
-                            "count_diff": count_diff,
-                            "mean_diff": mean_diff,
-                            "depth": depth,
-                            "years": [years[0], years[-1]],
-                        })
-
-                    except Exception as e:
-                        pass
-
-            df_change = pd.DataFrame(df_list)
-
-            change_data[geom_name] = pd.merge(gdf.drop(columns='geometry'), df_change, how='left', on='index')
-
-        return change_data
-
-    def compute_time_series(self, index_column_name: str = 'index') -> Dict[str, pd.DataFrame]:
-        df_list = []
-        time_series = {}
-        for geom_name, gdf in self.vector_data.items():
-            print(f"computing time series for vector data -> {geom_name}")
-            if self.raster_metadata.iso() and ('political' in geom_name):
-                gdf = gdf[gdf['gid_0'] == self.raster_metadata.iso()]
-
-            indexes = gdf[index_column_name].tolist()
-            years = self.raster_metadata.years()
-            depths = list(self.raster_metadata.depths().keys())
-
-            for index in tqdm(indexes):
-                geom = gdf[gdf[index_column_name] == index]['geometry'].iloc[0]
-                xmin, ymax, xmax, ymin = geom.bounds
-                ds_index = self.raster_data.sel(lon=slice(xmin, xmax), lat=slice(ymin, ymax)).copy()
-                ds_index = ds_index.where(ds_index[geom_name].isin(index))
-
-                for n, depth in enumerate(depths):
-                    try:
-                        if (self.raster_metadata.dataset == 'experimental') and (self.raster_metadata.group == 'stocks'):
+                        if (self.raster_metadata.dataset == 'experimental') and (
+                                self.raster_metadata.group == 'stocks'):
                             ds_var = ds_index.where(ds_index[geom_name].isin(index)).sel(
                                 depth=depth)[self.raster_metadata.variable()] / 10.
                         else:
                             ds_var = ds_index.where(ds_index[geom_name].isin(index)).sel(
                                 depth=depth)[self.raster_metadata.variable()]
 
-                        # Get values
-                        sums = ds_var.sum(['lon', 'lat']).values
-                        counts = ds_var.count(['lon', 'lat']).values
-                        values = sums / counts
+                        if data_type == 'change':
+                            # Get difference between two dates
+                            diff = ds_var.loc[dict(time=times[-1])] - ds_var.loc[dict(time=times[0])]
 
-                        # Save values
-                        df_list.append({
-                            "index": index,
-                            "sum_values": sums.tolist(),
-                            "count_values": counts.tolist(),
-                            "mean_values": values.tolist(),
-                            "depth": depth,
-                            "years": [years[0], years[-1]],
-                        })
+                            if len(depths) == len(self.raster_metadata.n_binds()):
+                                h, bins = da.histogram(diff, bins=self.raster_metadata.n_binds()[n],
+                                                       range=self.raster_metadata.bind_ranges()[n])
+                            else:
+                                h, bins = da.histogram(diff, bins=self.raster_metadata.n_binds()[0],
+                                                       range=self.raster_metadata.bind_ranges()[0])
+
+                            # Get values
+                            sum_diff = diff.sum().values
+                            count_diff = diff.count().values
+                            mean_diff = sum_diff / count_diff
+
+                            # Save values
+                            df_list.append({
+                                "index": index,
+                                "counts": h.compute().tolist(),
+                                "bins": bins.tolist(),
+                                "sum_diff": sum_diff,
+                                "count_diff": count_diff,
+                                "mean_diff": mean_diff,
+                                "depth": depth,
+                                "years": [years[0], years[-1]],
+                                "variable": self.raster_metadata.variable(),
+                                "group_type": self.raster_metadata.group
+                            })
+
+                        elif data_type == 'time_series':
+                            # Get values
+                            sums = ds_var.sum(['lon', 'lat']).values
+                            counts = ds_var.count(['lon', 'lat']).values
+                            values = sums / counts
+
+                            # Save values
+                            df_list.append({
+                                "index": index,
+                                "sum_values": sums.tolist(),
+                                "count_values": counts.tolist(),
+                                "mean_values": values.tolist(),
+                                "depth": depth,
+                                "years": [years[0], years[-1]],
+                                "variable": self.raster_metadata.variable(),
+                                "group_type": self.raster_metadata.group
+                            })
 
                     except Exception as e:
                         pass
+            df = pd.DataFrame(df_list)
+            data[geom_name] = pd.merge(gdf.drop(columns='geometry'), df, how='left', on='index')
 
-            df_time_series = pd.DataFrame(df_list)
-
-            time_series[geom_name] = pd.merge(gdf.drop(columns='geometry'), df_time_series, how='left', on='index')
-
-        return time_series
+        return data
 
 
 class PostProcessing:
-    def __init__(self, raster_metadata: RasterData):
+    def __init__(self, raster_metadata: RasterData, vector_data: Dict[str, gpd.GeoDataFrame]):
         self.raster_metadata = raster_metadata
+        self.vector_data = vector_data
 
-    def compute_level_0_data(self, data: Dict[str, pd.DataFrame], vector_data: Dict[str, gpd.GeoDataFrame],
-                             data_type: str = 'time_series') -> Dict[str, pd.DataFrame]:
+    def compute_level_0_data(self, data: Dict[str, pd.DataFrame], data_type: str = 'time_series'
+                             ) -> Dict[str, pd.DataFrame]:
         assert data_type in ['change', 'time_series'], "data_type must be 'change' or 'time_series'"
 
         depths = list(self.raster_metadata.depths().keys())
@@ -165,7 +138,7 @@ class PostProcessing:
             df = df[df['id'].notna()]
             df = df.astype({'id': int, 'id_0': int})
 
-            gdf = vector_data.get(geom_name_0)
+            gdf = self.vector_data.get(geom_name_0)
             if self.raster_metadata.iso() and ('political' in geom_name_0):
                 gdf = gdf[gdf['gid_0'] == self.raster_metadata.iso()]
 
@@ -194,6 +167,8 @@ class PostProcessing:
 
                     df_depth['depth'] = depth
                     df_depth['years'] = [df_tmp['years'].iloc[0]]
+                    df_depth['variable'] = df_tmp['variable'].iloc[0]
+                    df_depth['group_type'] = df_tmp['group_type'].iloc[0]
 
                     df_final = pd.concat([df_final, df_depth])
 

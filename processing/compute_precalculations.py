@@ -16,7 +16,8 @@ if __name__ == '__main__':
     # Read vector data
     print("Reading vector data!")
     vector = VectorData(vector_path, vector_prefixes)
-    vector_data = vector.read_data()
+    vector_data_0 = vector.read_data(suffix='_0.geojson')
+    vector_data_1 = vector.read_data(suffix='_1.geojson')
 
     for dataset in datasets:
         print(f"{dataset.title()}")
@@ -30,29 +31,26 @@ if __name__ == '__main__':
 
             # Rasterize vector data
             print("Rasterizing vector data!")
-            zonal_statistics = ZonalStatistics(raster_data, vector_data, raster_metadata)
+            zonal_statistics = ZonalStatistics(raster_data, vector_data_1, raster_metadata)
             zonal_statistics.rasterize_vector_data()
 
-            # Compute change histogram values
-            print("Compute change values!")
-            print("Level 1 geometries.")
-            change_data = zonal_statistics.compute_change()
-            # compute level 0 geometries' values
-            print("Level 0 geometries.")
-            vector_0 = VectorData(vector_path, vector_prefixes, suffix='_0.geojson')
-            vector_data_0 = vector_0.read_data()
+            # Compute Zonal Statistics
+            data = {}
+            post_processing = PostProcessing(raster_metadata, vector_data_0)
+            for data_type in ['change', 'time_series']:
+                print(f"Compute {data_type} values!")
+                # compute level 1 geometries' values
+                print("Level 1 geometries.")
+                data[data_type] = zonal_statistics.compute(data_type=data_type)
 
-            post_processing = PostProcessing(raster_metadata)
-            change_data = post_processing.compute_level_0_data(change_data, vector_data_0, data_type='change')
+                # compute level 0 geometries' values
+                print("Level 0 geometries.")
+                data[data_type] = post_processing.compute_level_0_data(data[data_type],
+                                                                       data_type=data_type)
 
-            # Compute time series values
-            print("Compute time series values!")
-            print("Level 1 geometries.")
-            time_series_data = zonal_statistics.compute_time_series()
-            # compute level 0 geometries' values
-            print("Level 0 geometries.")
-            time_series_data = post_processing.compute_level_0_data(time_series_data, vector_data_0,
-                                                                    data_type='time_series')
+
+
+
 
 
 
