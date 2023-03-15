@@ -11,11 +11,13 @@ from tqdm import tqdm
 @dataclass
 class VectorData:
     path: str
-    files: List
+    prefixes: List
+    suffix: str = '_1.geojson'
 
     def read_data(self) -> Dict[str, gpd.GeoDataFrame]:
-        dataframes: Dict[str, pd.DataFrame] = {}
-        for file in tqdm(self.files):
+        dataframes: Dict[str, gpd.GeoDataFrame] = {}
+        files = [prefix + self.suffix for prefix in self.prefixes]
+        for file in tqdm(files):
             file_path = os.path.join(self.path, file)
             gdf = gpd.read_file(file_path)
             dataframes[file.split('.')[0]] = gdf

@@ -1,5 +1,7 @@
+import json
 from typing import Dict
 
+import numpy as np
 import pandas as pd
 import regionmask
 import xarray as xr
@@ -146,3 +148,60 @@ class ZonalStatistics:
             time_series[geom_name] = pd.merge(gdf.drop(columns='geometry'), df_time_series, how='left', on='index')
 
         return time_series
+
+
+class PostProcessing:
+    def __init__(self, raster_metadata: RasterData):
+        self.raster_metadata = raster_metadata
+
+    def compute_level_0_data(self, data: Dict[str, pd.DataFrame], vector_data: Dict[str, gpd.GeoDataFrame],
+                             data_type: str = 'time_series') -> Dict[str, pd.DataFrame]:
+        assert data_type in ['change', 'time_series'], "data_type must be 'change' or 'time_series'"
+
+        depths = list(self.raster_metadata.depths().keys())
+
+        for geom_name, df in data.items():
+            geom_name_0 = geom_name.replace('_1', '_0')
+            df = df[df['id'].notna()]
+            df = df.astype({'id': int, 'id_0': int})
+
+            gdf = vector_data.get(geom_name_0)
+            if self.raster_metadata.iso() and ('political' in geom_name_0):
+                gdf = gdf[gdf['gid_0'] == self.raster_metadata.iso()]
+
+            df_final = pd.DataFrame()
+            for depth in depths:
+                df_tmp = df[df['depth'] == depth].copy()
+
+                if not df_tmp.empty:
+                    if data_type == 'change':
+                        df_tmp = df_tmp.astype({'sum_diff': 'float64', 'count_diff': 'float64', 'mean_diff': 'float64'})
+                        df_tmp['counts'] = df_tmp['counts'].apply(lambda x: np.array(x))
+                        df_counts = df_tmp[['id_0', 'counts']].groupby('id_0').sum().reset_index()
+                        df_counts['bins'] = [df_tmp['bins'].iloc[0]]
+
+                        df_diff = df_tmp[['id_0', 'sum_diff', 'count_diff']].groupby('id_0').sum().reset_index()
+                        df_diff['mean_diff'] = df_diff['sum_diff'] / df_diff['count_diff']
+
+                        df_depth = pd.merge(df_counts, df_diff, on='id_0', how='left')
+
+                    elif data_type == 'time_series':
+                        df_tmp['sum_values'] = df_tmp['sum_values'].apply(lambda x: np.array(x))
+                        df_tmp['count_values'] = df_tmp['count_values'].apply(lambda x: np.array(x))
+                        df_depth = df_tmp[['id_0', 'sum_values', 'count_values']].groupby(
+                            'id_0').sum().reset_index()
+                        df_depth['mean_values'] = df_depth['sum_values'] / df_depth['count_values']
+
+                    df_depth['depth'] = depth
+                    df_depth['years'] = [df_tmp['years'].iloc[0]]
+
+                    df_final = pd.concat([df_final, df_depth])
+
+            df_final = pd.merge(gdf.drop(columns='geometry').astype({'id_0': int}),
+                                df_final.astype({'id_0': int}), on='id_0', how='left')
+
+        data[geom_name_0] = df_final
+
+        return data
+
+

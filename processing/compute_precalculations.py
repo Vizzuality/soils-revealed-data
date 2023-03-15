@@ -1,5 +1,5 @@
 from processing.utils.data import VectorData, RasterData
-from processing.utils.calculations import ZonalStatistics
+from processing.utils.calculations import ZonalStatistics, PostProcessing
 from processing.utils.raster import ZarrData
 
 datasets = ['experimental'] #['global', 'scenarios', 'experimental']
@@ -9,13 +9,13 @@ groups = {'global': ['historic', 'recent'],
           'experimental': ['stocks', 'concentration']}
 
 vector_path = '../data/processed/vector_data/'
-vector_files = ['political_boundaries_1.geojson'] #['political_boundaries_1.geojson', 'hydrological_basins_1.geojson',
-                #'biomes_1.geojson', 'landforms_1.geojson']
+vector_prefixes = ['political_boundaries'] #['political_boundaries', 'hydrological_basins',
+                #'biomes', 'landforms']
 
 if __name__ == '__main__':
     # Read vector data
     print("Reading vector data!")
-    vector = VectorData(vector_path, vector_files)
+    vector = VectorData(vector_path, vector_prefixes)
     vector_data = vector.read_data()
 
     for dataset in datasets:
@@ -35,13 +35,24 @@ if __name__ == '__main__':
 
             # Compute change histogram values
             print("Compute change values!")
+            print("Level 1 geometries.")
             change_data = zonal_statistics.compute_change()
+            # compute level 0 geometries' values
+            print("Level 0 geometries.")
+            vector_0 = VectorData(vector_path, vector_prefixes, suffix='_0.geojson')
+            vector_data_0 = vector_0.read_data()
+
+            post_processing = PostProcessing(raster_metadata)
+            change_data = post_processing.compute_level_0_data(change_data, vector_data_0, data_type='change')
 
             # Compute time series values
             print("Compute time series values!")
+            print("Level 1 geometries.")
             time_series_data = zonal_statistics.compute_time_series()
-            print(time_series_data)
-
+            # compute level 0 geometries' values
+            print("Level 0 geometries.")
+            time_series_data = post_processing.compute_level_0_data(time_series_data, vector_data_0,
+                                                                    data_type='time_series')
 
 
 
