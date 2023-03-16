@@ -1,4 +1,5 @@
 import os
+import warnings
 from typing import Dict, List
 from dataclasses import dataclass
 
@@ -7,6 +8,7 @@ import pandas as pd
 import geopandas as gpd
 from tqdm import tqdm
 
+warnings.filterwarnings('ignore', 'GeoSeries.notna', UserWarning)
 
 @dataclass
 class VectorData:
@@ -19,7 +21,15 @@ class VectorData:
         for file in tqdm(files):
             file_path = os.path.join(self.path, file)
             gdf = gpd.read_file(file_path)
+            # Remove rows with None geometries
+            gdf = gdf[gdf['geometry'].notnull()]
+            # Make invalid geometries valid
+            invalid_geometries = ~gdf['geometry'].is_valid
+            if invalid_geometries.any():
+                gdf['geometry'] = gdf['geometry'].apply(lambda x: x.buffer(0))
+
             dataframes[file.split('.')[0]] = gdf
+
         return dataframes
 
 
@@ -175,6 +185,11 @@ class RasterData:
         return {'global': None,
                 'scenarios': None,
                 'experimental': 'ARG'}[self.dataset]
+
+    def geometry_path(self):
+        return {'global': None,
+                'scenarios': None,
+                'experimental': '../data/processed/vector_data/argentina.geojson'}[self.dataset]
 
     def n_binds(self):
         return {'global': {'historic': [40, 40, 60], 'recent': [10]},

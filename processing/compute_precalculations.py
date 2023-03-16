@@ -1,3 +1,5 @@
+import pandas as pd
+
 from processing.utils.data import VectorData, RasterData
 from processing.utils.calculations import ZonalStatistics, PostProcessing
 from processing.utils.raster import ZarrData
@@ -47,8 +49,18 @@ if __name__ == '__main__':
                 print("Level 0 geometries.")
                 data[data_type] = post_processing.compute_level_0_data(data[data_type],
                                                                        data_type=data_type)
+            # Save data
+            print("Saving the data!")
+            for data_type, values in data.items():
+                data_type_data = {}
+                for key, value in data[data_type].items():
+                    prefix = key.rsplit('_', 1)[0]
+                    if prefix not in data_type_data:
+                        data_type_data[prefix] = value
+                    data_type_data[prefix] = pd.concat([data_type_data[prefix], value])
 
-
+                for geom_type, df in data_type_data.items():
+                    df.to_csv(f"../data/processed/precalculations/{geom_type}_{data_type}_{dataset}_{group}.csv")
 
 
 

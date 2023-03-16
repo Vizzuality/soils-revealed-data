@@ -41,8 +41,13 @@ class ZonalStatistics:
         data = {}
         for geom_name, gdf in self.vector_data.items():
             print(f"computing {data_type} for vector data -> {geom_name}")
-            if self.raster_metadata.iso() and ('political' in geom_name):
-                gdf = gdf[gdf['gid_0'] == self.raster_metadata.iso()]
+            if self.raster_metadata.iso():
+                if 'political' in geom_name:
+                    gdf = gdf[gdf['gid_0'] == self.raster_metadata.iso()]
+                else:
+                    region = gpd.read_file(self.raster_metadata.geometry_path())
+                    geom = region.geometry.iloc[0]
+                    gdf = gdf[gdf.intersects(geom)]
 
             indexes = gdf[index_column_name].tolist()
             times = self.raster_metadata.times()
@@ -56,7 +61,6 @@ class ZonalStatistics:
                 ds_index = ds_index.where(ds_index[geom_name].isin(index))
 
                 for n, depth in enumerate(depths):
-                    values = {"index": index}
                     try:
                         if (self.raster_metadata.dataset == 'experimental') and (
                                 self.raster_metadata.group == 'stocks'):
@@ -80,7 +84,10 @@ class ZonalStatistics:
                             # Get values
                             sum_diff = diff.sum().values
                             count_diff = diff.count().values
-                            mean_diff = sum_diff / count_diff
+                            if count_diff != 0:
+                                mean_diff = sum_diff / count_diff
+                            else:
+                                mean_diff = sum_diff
 
                             # Save values
                             df_list.append({
@@ -93,14 +100,17 @@ class ZonalStatistics:
                                 "depth": depth,
                                 "years": [years[0], years[-1]],
                                 "variable": self.raster_metadata.variable(),
-                                "group_type": self.raster_metadata.group
+                                "group_type": self.raster_metadata.dataset
                             })
 
                         elif data_type == 'time_series':
                             # Get values
                             sums = ds_var.sum(['lon', 'lat']).values
                             counts = ds_var.count(['lon', 'lat']).values
-                            values = sums / counts
+                            if all(elem == 0 for elem in counts):
+                                values = sums
+                            else:
+                                values = sums / counts
 
                             # Save values
                             df_list.append({
@@ -111,7 +121,7 @@ class ZonalStatistics:
                                 "depth": depth,
                                 "years": [years[0], years[-1]],
                                 "variable": self.raster_metadata.variable(),
-                                "group_type": self.raster_metadata.group
+                                "group_type": self.raster_metadata.dataset
                             })
 
                     except Exception as e:
@@ -133,17 +143,22 @@ class PostProcessing:
 
         depths = list(self.raster_metadata.depths().keys())
 
-        for geom_name, df in data.items():
-            geom_name_0 = geom_name.replace('_1', '_0')
+        for geom_name, gdf in self.vector_data.items():
+            geom_name_1 = geom_name.replace('_0', '_1')
+            df = data[geom_name_1]
+            print(f"computing {data_type} for vector data -> {geom_name}")
             df = df[df['id'].notna()]
             df = df.astype({'id': int, 'id_0': int})
 
-            gdf = self.vector_data.get(geom_name_0)
-            if self.raster_metadata.iso() and ('political' in geom_name_0):
+            if self.raster_metadata.iso() and ('political' in geom_name):
                 gdf = gdf[gdf['gid_0'] == self.raster_metadata.iso()]
+            else:
+                region = gpd.read_file(self.raster_metadata.geometry_path())
+                geom = region.geometry.iloc[0]
+                gdf = gdf[gdf.intersects(geom)]
 
             df_final = pd.DataFrame()
-            for depth in depths:
+            for depth in tqdm(depths):
                 df_tmp = df[df['depth'] == depth].copy()
 
                 if not df_tmp.empty:
@@ -151,7 +166,7 @@ class PostProcessing:
                         df_tmp = df_tmp.astype({'sum_diff': 'float64', 'count_diff': 'float64', 'mean_diff': 'float64'})
                         df_tmp['counts'] = df_tmp['counts'].apply(lambda x: np.array(x))
                         df_counts = df_tmp[['id_0', 'counts']].groupby('id_0').sum().reset_index()
-                        df_counts['bins'] = [df_tmp['bins'].iloc[0]]
+                        df_counts['bins'] = [df_tmp['bins'].iloc[0]] * len(df_counts)
 
                         df_diff = df_tmp[['id_0', 'sum_diff', 'count_diff']].groupby('id_0').sum().reset_index()
                         df_diff['mean_diff'] = df_diff['sum_diff'] / df_diff['count_diff']
@@ -166,7 +181,7 @@ class PostProcessing:
                         df_depth['mean_values'] = df_depth['sum_values'] / df_depth['count_values']
 
                     df_depth['depth'] = depth
-                    df_depth['years'] = [df_tmp['years'].iloc[0]]
+                    df_depth['years'] = [df_tmp['years'].iloc[0]] * len(df_depth)
                     df_depth['variable'] = df_tmp['variable'].iloc[0]
                     df_depth['group_type'] = df_tmp['group_type'].iloc[0]
 
@@ -175,7 +190,7 @@ class PostProcessing:
             df_final = pd.merge(gdf.drop(columns='geometry').astype({'id_0': int}),
                                 df_final.astype({'id_0': int}), on='id_0', how='left')
 
-        data[geom_name_0] = df_final
+            data[geom_name] = df_final
 
         return data
 
