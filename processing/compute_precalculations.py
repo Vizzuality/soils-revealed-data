@@ -1,20 +1,28 @@
+import click
 import pandas as pd
 
-from processing.utils.data import VectorData, RasterData
-from processing.utils.calculations import ZonalStatistics, PostProcessing
-from processing.utils.raster import ZarrData
+from utils.data import VectorData, RasterData
+from utils.calculations import ZonalStatistics, PostProcessing
+from utils.raster import ZarrData
 
-datasets = ['experimental'] #['global', 'scenarios', 'experimental']
-groups = {'global': ['historic', 'recent'],
-          'scenarios': ['crop_I', 'crop_MG', 'crop_MGI', 'grass_part', 'grass_full', 'rewilding',
-                        'degradation_ForestToGrass', 'degradation_ForestToCrop', 'degradation_NoDeforestation'],
-          'experimental': ['stocks', 'concentration']}
 
-vector_path = '../data/processed/vector_data/'
-vector_prefixes = ['political_boundaries'] #['political_boundaries', 'hydrological_basins',
-                #'biomes', 'landforms']
+@click.command()
+@click.argument('datasets', type=lambda s: s.split(','))
+@click.argument('vector_prefixes', type=lambda s: s.split(','))
+@click.option('--vector_path', '-vp', default='../data/processed/vector_data/',
+              help='Path to vector data.')
+def main(datasets, vector_prefixes, vector_path):
+    """
+    Compute precalculations
+    """
+    print('Datasets:', datasets)
+    print('Vector prefixes:', vector_prefixes)
 
-if __name__ == '__main__':
+    groups = {'global': ['historic', 'recent'],
+              'scenarios': ['crop_I', 'crop_MG', 'crop_MGI', 'grass_part', 'grass_full', 'rewilding',
+                            'degradation_ForestToGrass', 'degradation_ForestToCrop', 'degradation_NoDeforestation'],
+              'experimental': ['stocks', 'concentration']}
+
     # Read vector data
     print("Reading vector data!")
     vector = VectorData(vector_path, vector_prefixes)
@@ -61,6 +69,11 @@ if __name__ == '__main__':
 
                 for geom_type, df in data_type_data.items():
                     df.to_csv(f"../data/processed/precalculations/{geom_type}_{data_type}_{dataset}_{group}.csv")
+
+
+if __name__ == '__main__':
+    main()
+
 
 
 

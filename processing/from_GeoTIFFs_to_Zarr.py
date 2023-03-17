@@ -1,13 +1,20 @@
-from processing.utils.raster import GeoTiffConverter
-from processing.utils.data import RasterData
+import click
 
-datasets = ['global', 'scenarios', 'experimental']
-groups = {'global': ['historic', 'recent'],
-          'scenarios': ['crop_I', 'crop_MG', 'crop_MGI', 'grass_part', 'grass_full', 'rewilding',
-                        'degradation_ForestToGrass', 'degradation_ForestToCrop', 'degradation_NoDeforestation'],
-          'experimental': ['stocks', 'concentration']}
+from utils.raster import GeoTiffConverter
+from utils.data import RasterData
 
-if __name__ == '__main__':
+
+@click.command()
+@click.argument('datasets', type=lambda s: s.split(','))
+def convert_to_zarr(datasets):
+    """
+    Convert GeoTIFFs to Zarr.
+    """
+    groups = {'global': ['historic', 'recent'],
+              'scenarios': ['crop_I', 'crop_MG', 'crop_MGI', 'grass_part', 'grass_full', 'rewilding',
+                            'degradation_ForestToGrass', 'degradation_ForestToCrop', 'degradation_NoDeforestation'],
+              'experimental': ['stocks', 'concentration']}
+
     for dataset in datasets:
         print(dataset)
         for group in groups[dataset]:
@@ -17,6 +24,11 @@ if __name__ == '__main__':
             # Save GeoTIFFs as Zarr
             geotiff_converter = GeoTiffConverter(geotiff_obj=geotiff_data)
             geotiff_converter.convert_to_zarr()
+
+
+if __name__ == '__main__':
+    convert_to_zarr()
+
 
 
 

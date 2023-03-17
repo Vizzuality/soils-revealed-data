@@ -1,4 +1,3 @@
-import json
 from typing import Dict
 
 import numpy as np
@@ -9,7 +8,7 @@ import geopandas as gpd
 import dask.array as da
 from tqdm import tqdm
 
-from processing.utils.data import RasterData
+from utils.data import RasterData
 
 
 class ZonalStatistics:

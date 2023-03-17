@@ -10,7 +10,7 @@ import xarray as xr
 from dotenv import load_dotenv
 from google.cloud import storage
 
-from processing.utils.data import RasterData
+from utils.data import RasterData
 
 # Load .env variables
 load_dotenv()
