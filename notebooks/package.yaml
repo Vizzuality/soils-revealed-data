@@ -17,8 +17,6 @@ dependencies:
   - bokeh
   - cartopy
   - cython
-  - dask
-  - dask-cloudprovider
   - numpy
   - h5py
   - h5netcdf
@@ -36,3 +34,9 @@ dependencies:
   - python-dotenv
   - pre-commit
   - click
+  - tqdm==4.64.1
+  - regionmask==0.9.0
+  - dask==2023.3.1
+  - dask-cloudprovider
+  - zarr==2.14.2
+  - rioxarray

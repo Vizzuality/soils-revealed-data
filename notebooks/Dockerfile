@@ -1,8 +1,8 @@
 FROM mambaorg/micromamba:0.27.0 AS base
 
-COPY --chown=$MAMBA_USER:$MAMBA_USER environment.conda-lock.yaml /tmp/environment.conda-lock.yaml
+COPY --chown=$MAMBA_USER:$MAMBA_USER package.yaml /tmp/package.yaml
 
-RUN micromamba install -n base --yes --file /tmp/environment.conda-lock.yaml && \
+RUN micromamba install -n base --yes --file /tmp/package.yaml && \
     micromamba clean --all --yes
 
 # Otherwise python will not be found
