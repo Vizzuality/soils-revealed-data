@@ -10,7 +10,7 @@ def convert_to_zarr(datasets):
     """
     Convert GeoTIFFs to Zarr.
     """
-    groups = {'global': ['historic', 'recent'],
+    groups = {'global': ['recent'],#['historic', 'recent'],
               'scenarios': ['crop_I', 'crop_MG', 'crop_MGI', 'grass_part', 'grass_full', 'rewilding',
                             'degradation_ForestToGrass', 'degradation_ForestToCrop', 'degradation_NoDeforestation'],
               'experimental': ['stocks', 'concentration']}
