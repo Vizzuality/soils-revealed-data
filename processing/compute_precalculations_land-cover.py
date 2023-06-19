@@ -30,6 +30,8 @@ def main():
     vector = VectorData(VECTOR_PATH, VECTOR_PREFIXES)
     vector_data_0 = vector.read_data(suffix='_0.geojson')
     vector_data_1 = vector.read_data(suffix='_1.geojson')
+    vector_data_0['political_boundaries_0'] = vector_data_0['political_boundaries_0'][vector_data_0['political_boundaries_0']['gid_0'].isin(['ESP', 'FRA'])]
+    vector_data_1['political_boundaries_1'] = vector_data_1['political_boundaries_1'][vector_data_1['political_boundaries_1']['gid_0'].isin(['ESP', 'FRA'])]
 
     # Read raster data
     print("Reading raster data!")
@@ -75,17 +77,14 @@ def main():
     except Exception as e:
         # Handle any exceptions that occur during the computation
         print(f"An error occurred during the computation: {str(e)}")
-    finally:
-        # Clean up any resources if needed
-        lc_statistics.close()  # Assuming there is a close() method to release resources
     
     # Save data
     print("Saving the data!")
     for geom_type in VECTOR_PREFIXES:
         df = pd.concat([data[key] for key in data if geom_type in key])
         df = df.sort_values(['id_0', 'id'])
-        df['VARIABLE'] = VARIABLE
-        df['GROUP_TYPE'] = GROUP_TYPE
+        df['variable'] = VARIABLE
+        df['group_type'] = GROUP_TYPE
         df.to_csv(f"../data/processed/precalculations/{geom_type}_land_cover_{GROUP_TYPE}.csv", index=False)
         
     client.close()
