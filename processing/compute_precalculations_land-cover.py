@@ -30,8 +30,6 @@ def main():
     vector = VectorData(VECTOR_PATH, VECTOR_PREFIXES)
     vector_data_0 = vector.read_data(suffix='_0.geojson')
     vector_data_1 = vector.read_data(suffix='_1.geojson')
-    vector_data_0['political_boundaries_0'] = vector_data_0['political_boundaries_0'][vector_data_0['political_boundaries_0']['gid_0'].isin(['ESP', 'FRA'])]
-    vector_data_1['political_boundaries_1'] = vector_data_1['political_boundaries_1'][vector_data_1['political_boundaries_1']['gid_0'].isin(['ESP', 'FRA'])]
 
     # Read raster data
     print("Reading raster data!")

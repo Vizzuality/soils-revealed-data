@@ -30,5 +30,5 @@ services:
         - ./notebooks:/home/mambauser/notebooks
         - ./processing:/home/mambauser/processing
       ports:
-        - 8887:8888
+        - 3000:8888
       container_name: soils_revealed_jupyter_notebook

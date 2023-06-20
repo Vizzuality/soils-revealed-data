@@ -46,7 +46,7 @@ def read_zarr_from_local_dir(path, group=None):
 
 class GCSGeoTiff:
     # Set environment variable for service account key file path
-    os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = os.getenv('PRIVATEKEY_PATH')
+    #os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = os.getenv('PRIVATEKEY_PATH')
     bucket_name = os.getenv('BUCKET')
 
     def __init__(self, blob_name: Union[str, Path]):
