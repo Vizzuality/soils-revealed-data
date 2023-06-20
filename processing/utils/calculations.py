@@ -7,6 +7,7 @@ import xarray as xr
 import geopandas as gpd
 import dask.array as da
 from tqdm import tqdm
+from shapely.affinity import translate
 
 from utils.data import RasterData, LandCoverData
 from utils.util import sum_dicts, sort_dict
@@ -289,6 +290,10 @@ class LandCoverStatistics:
                 xmin, ymin, xmax, ymax = geom.bounds
 
                 ds_index = self.raster_data.sel(x=slice(xmin, xmax), y=slice(ymax, ymin)).copy()
+                
+                if xmin == -180 and xmax == 180:
+                    ds_index['x'] = ds_index['x'].values + 180
+                    gdf_index['geometry'] = translate(geom, xoff=180)
                 
                 # Rasterize vector data
                 ds_index = self._rasterize_vector_data(ds_index, gdf_index, index_column_name, x_coor_name, y_coor_name)
