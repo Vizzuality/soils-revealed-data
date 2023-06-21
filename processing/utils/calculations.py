@@ -296,7 +296,7 @@ class LandCoverStatistics:
                 xmin, ymin, xmax, ymax = geom.bounds
                 
                 # Take care of the antimeridian
-                if round(xmin) == -180 and round(xmax) == 180:
+                if round(xmin) <= -175 and round(xmax) >= 175:
                     # Split the geometry with the antimeridian.
                     gdf_split = split_geometry_with_antimeridian(gdf_index)
                     
@@ -322,16 +322,6 @@ class LandCoverStatistics:
                                                                     'index', 'x', 'y')
                 # Filter by geometry
                 ds_index = ds_index.where(ds_index['mask'].isin(index))                
-                
-                #ds_index = self.raster_data.sel(x=slice(xmin, xmax), y=slice(ymax, ymin)).copy()
-                #
-                #if xmin == -180 and xmax == 180:
-                #    ds_index['x'] = ds_index['x'].values + 180
-                #    gdf_index['geometry'] = translate(geom, xoff=180)
-                #
-                ## Rasterize vector data
-                #ds_index = self._rasterize_vector_data(ds_index, gdf_index, index_column_name, x_coor_name, y_coor_name)
-                #ds_index = ds_index.where(ds_index['mask'].isin(index))
                 
                 # Get statistics
                 try:
