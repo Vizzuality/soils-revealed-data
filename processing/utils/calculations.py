@@ -10,7 +10,8 @@ from tqdm import tqdm
 from shapely.affinity import translate
 
 from utils.data import RasterData, LandCoverData
-from utils.util import sum_dicts, sort_dict
+from utils.util import sum_dicts, sort_dict, \
+remove_small_polygons, split_geometry_with_antimeridian
 
 
 class ZonalStatistics:
@@ -286,18 +287,51 @@ class LandCoverStatistics:
             df_list = []
             for index in tqdm(indexes):
                 gdf_index  = gdf[gdf['index'] == index].copy()
+                if (index == 960) and (geom_name == 'political_boundaries_1'):
+                    # Remove small polygons 
+                    gdf_index['geometry'] = remove_small_polygons(gdf_index['geometry'].iloc[0], 0.02)
+                
+                # Get bounds
                 geom = gdf_index['geometry'].iloc[0]
                 xmin, ymin, xmax, ymax = geom.bounds
+                
+                # Take care of the antimeridian
+                if round(xmin) == -180 and round(xmax) == 180:
+                    # Split the geometry with the antimeridian.
+                    gdf_split = split_geometry_with_antimeridian(gdf_index)
+                    
+                    ds_list = []
+                    for side in ['left', 'right']:
+                        gdf_side = gdf_split[gdf_split['side'] == side].drop(columns="side")
+                        geom = gdf_side['geometry'].iloc[0]
+                        xmin, ymin, xmax, ymax = geom.bounds
+                        ds_side = self.raster_data.sel(x=slice(xmin, xmax), y=slice(ymax, ymin)) 
+                        # Rasterize vector data
+                        ds_list.append(self._rasterize_vector_data(ds_side, 
+                                                                    gdf_side.drop(columns="index").reset_index(),
+                                                                    'index', 'x', 'y'))
 
-                ds_index = self.raster_data.sel(x=slice(xmin, xmax), y=slice(ymax, ymin)).copy()
+                    # Combine the two datasets using combine_by_coords
+                    ds_index = xr.combine_by_coords(ds_list)
+
+                else:
+                    ds_index = self.raster_data.sel(x=slice(xmin, xmax), y=slice(ymax, ymin)).copy()
+                    # Rasterize vector data
+                    ds_index = self._rasterize_vector_data(ds_index, 
+                                                                    gdf_index.drop(columns="index").reset_index(), 
+                                                                    'index', 'x', 'y')
+                # Filter by geometry
+                ds_index = ds_index.where(ds_index['mask'].isin(index))                
                 
-                if xmin == -180 and xmax == 180:
-                    ds_index['x'] = ds_index['x'].values + 180
-                    gdf_index['geometry'] = translate(geom, xoff=180)
-                
-                # Rasterize vector data
-                ds_index = self._rasterize_vector_data(ds_index, gdf_index, index_column_name, x_coor_name, y_coor_name)
-                ds_index = ds_index.where(ds_index['mask'].isin(index))
+                #ds_index = self.raster_data.sel(x=slice(xmin, xmax), y=slice(ymax, ymin)).copy()
+                #
+                #if xmin == -180 and xmax == 180:
+                #    ds_index['x'] = ds_index['x'].values + 180
+                #    gdf_index['geometry'] = translate(geom, xoff=180)
+                #
+                ## Rasterize vector data
+                #ds_index = self._rasterize_vector_data(ds_index, gdf_index, index_column_name, x_coor_name, y_coor_name)
+                #ds_index = ds_index.where(ds_index['mask'].isin(index))
                 
                 # Get statistics
                 try:
