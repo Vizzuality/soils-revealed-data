@@ -4,7 +4,7 @@ import pandas as pd
 from dotenv import load_dotenv
 from dask.distributed import Client
 
-from utils.data import VectorData, LandCoverData
+from utils.data import VectorData, LandCoverData, LandCoverRasterData
 from utils.calculations import LandCoverStatistics
 
 # Load .env VARIABLEs
