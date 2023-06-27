@@ -5,7 +5,6 @@ from dotenv import load_dotenv
 from dask.distributed import Client
 
 from utils.data import VectorData, LandCoverData
-from utils.raster import read_zarr_from_s3, read_zarr_from_local_dir
 from utils.calculations import LandCoverStatistics
 
 # Load .env VARIABLEs
