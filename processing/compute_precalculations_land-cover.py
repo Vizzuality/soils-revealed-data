@@ -15,6 +15,7 @@ load_dotenv()
 RASTER_PATH = '../data/processed/raster_data/'
 VECTOR_PATH = '../data/processed/vector_data/'
 VECTOR_PREFIXES = ['political_boundaries']
+SCENARIOS = ['crop_I', 'crop_MG', 'crop_MGI', 'grass_part', 'grass_full', 'rewilding', 'degradation_ForestToGrass', 'degradation_ForestToCrop', 'degradation_NoDeforestation']
 READ_DATA_FROM = 'local_dir'
 VARIABLE = 'stocks'
 GROUP_TYPE = 'recent'
@@ -34,33 +35,8 @@ def main():
     # Read raster data
     print("Reading raster data!")
     lc_metadata = LandCoverData()
-    
-    # read Recent dataset
-    file = 'global-dataset.zarr'
-    dataset = 'global-dataset'
-    group = 'recent'
-    if READ_DATA_FROM == 's3':
-        ds = read_zarr_from_s3(access_key_id = os.getenv("S3_ACCESS_KEY_ID"), 
-                            secret_accsess_key = os.getenv("S3_SECRET_ACCESS_KEY"),
-                            dataset = dataset, group = group) 
-    elif READ_DATA_FROM == 'local_dir':
-        ds = read_zarr_from_local_dir(path=os.path.join(RASTER_PATH, file), group = group)
-        
-    ds = ds.drop_dims('depth').sel(time=['2000-12-31T00:00:00.000000000', '2018-12-31T00:00:00.000000000'])
-
-    # read land cover dataset
-    file = 'land-cover.zarr'
-    dataset = 'land-cover'
-    if READ_DATA_FROM == 's3':
-        ds_lc = read_zarr_from_s3(access_key_id = os.getenv("S3_ACCESS_KEY_ID"), 
-                                secret_accsess_key = os.getenv("S3_SECRET_ACCESS_KEY"),
-                                dataset = dataset) 
-    elif READ_DATA_FROM == 'local_dir':
-        ds_lc = read_zarr_from_local_dir(path=os.path.join(RASTER_PATH, file))
-        
-    ds['land-cover'] = ds_lc['land-cover']
-
-    raster_data = ds
+    raster = LandCoverRasterData(group_type=GROUP_TYPE, data_from=READ_DATA_FROM, path=RASTER_PATH)
+    raster_data = raster.read_data() 
 
     # Compute Land Cover Statistics
     data = {}

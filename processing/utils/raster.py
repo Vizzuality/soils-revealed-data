@@ -14,34 +14,6 @@ from utils.data import RasterData
 
 # Load .env variables
 load_dotenv()
-
-
-def read_zarr_from_s3(access_key_id, secret_accsess_key, dataset, group=None):
-    # AWS S3 path
-    s3_path = f's3://soils-revealed/{dataset}.zarr'
-    
-    # Initilize the S3 file system
-    s3 = s3fs.S3FileSystem(key=access_key_id, secret=secret_accsess_key)
-    store = s3fs.S3Map(root=s3_path, s3=s3, check=False)
-    
-    # Read Zarr file
-    if group:
-        ds = xr.open_zarr(store=store, group=group, consolidated=True)
-    else:
-        ds = xr.open_zarr(store=store, consolidated=True)
-       
-    return ds 
-
-
-def read_zarr_from_local_dir(path, group=None):
-    # Read Zarr file
-    if group:
-        with xr.open_zarr(store=path, group=group, consolidated=True) as ds:
-            return ds
-
-    else:
-        with xr.open_zarr(store=path, consolidated=True) as ds:
-            return ds
         
 
 class GCSGeoTiff:

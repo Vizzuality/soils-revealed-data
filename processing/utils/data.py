@@ -4,12 +4,81 @@ from typing import Dict, List
 from dataclasses import dataclass
 
 import numpy as np
+import xarray as xd
 import pandas as pd
 import geopandas as gpd
 from tqdm import tqdm
 
+from utils.util import read_zarr_from_s3, read_zarr_from_local_dir
+
 warnings.filterwarnings('ignore', 'GeoSeries.notna', UserWarning)
 
+
+@dataclass
+class LandCoverRasterData:
+    group_type: str = 'recent'
+    data_from: str = 'local_dir' 
+    path: str = None
+    scenarios: List = None
+
+    def read_data(self) -> xd.Dataset:
+        if self.group_type == 'recent':
+            # Read recent dataset
+            file = 'global-dataset.zarr'
+            dataset = 'global-dataset'
+            group = 'recent'
+            if self.data_from == 's3':
+                ds = read_zarr_from_s3(access_key_id = os.getenv("S3_ACCESS_KEY_ID"), 
+                                    secret_accsess_key = os.getenv("S3_SECRET_ACCESS_KEY"),
+                                    dataset = dataset, group = group) 
+            elif self.data_from == 'local_dir':
+                ds = read_zarr_from_local_dir(path=os.path.join(self.path, file), group = group)
+                
+            ds = ds.drop_dims('depth').sel(time=['2000-12-31T00:00:00.000000000', '2018-12-31T00:00:00.000000000'])
+
+            # Read land cover dataset
+            file = 'land-cover.zarr'
+            dataset = 'land-cover'
+            if self.data_from == 's3':
+                ds_lc = read_zarr_from_s3(access_key_id = os.getenv("S3_ACCESS_KEY_ID"), 
+                                        secret_accsess_key = os.getenv("S3_SECRET_ACCESS_KEY"),
+                                        dataset = dataset) 
+            elif self.data_from == 'local_dir':
+                ds_lc = read_zarr_from_local_dir(path=os.path.join(self.path, file))
+                
+            ds['land-cover'] = ds_lc['land-cover']
+        elif self.group_type == 'future':
+            # Read land cover dataset
+            file = 'land-cover.zarr'
+            dataset = 'land-cover'
+            if self.data_from == 's3':
+                ds = read_zarr_from_s3(access_key_id = os.getenv("S3_ACCESS_KEY_ID"), 
+                                        secret_accsess_key = os.getenv("S3_SECRET_ACCESS_KEY"),
+                                        dataset = dataset) 
+            elif self.data_from == 'local_dir':
+                ds = read_zarr_from_local_dir(path=os.path.join(self.path, file))
+                
+            ds = ds.sel(time=['2018-12-31T00:00:00.000000000'])
+
+            # Read future dataset
+            group = 'future'
+            for scenario in self.scenarios:
+                if self.data_from == 's3':
+                    ds_future = read_zarr_from_s3(access_key_id = os.getenv("S3_ACCESS_KEY_ID"), 
+                                        secret_accsess_key = os.getenv("S3_SECRET_ACCESS_KEY"),
+                                        dataset = scenario, group = group) 
+                elif self.data_from == 'local_dir':
+                    ds_future = read_zarr_from_local_dir(path=os.path.join(self.path, scenario+'.zarr'), group = group)
+                    
+                ds_future = ds_future.drop_dims('depth').sel(time=['2018-12-31T00:00:00.000000000', '2038-12-31T00:00:00.000000000'])
+                    
+                ds[scenario] = ds_future['stocks'].isel(time=1) - \
+                    ds_future['stocks'].isel(time=0)
+        
+
+        return ds
+    
+    
 @dataclass
 class VectorData:
     path: str
