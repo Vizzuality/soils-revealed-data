@@ -16,6 +16,7 @@ RASTER_PATH = '../data/processed/raster_data/'
 VECTOR_PATH = '../data/processed/vector_data/'
 VECTOR_PREFIXES = ['political_boundaries']
 SCENARIOS = ['crop_I', 'crop_MG', 'crop_MGI', 'grass_part', 'grass_full', 'rewilding', 'degradation_ForestToGrass', 'degradation_ForestToCrop', 'degradation_NoDeforestation']
+SCENARIOS = None
 READ_DATA_FROM = 'local_dir'
 VARIABLE = 'stocks'
 GROUP_TYPE = 'recent'
@@ -35,12 +36,13 @@ def main():
     # Read raster data
     print("Reading raster data!")
     lc_metadata = LandCoverData()
-    raster = LandCoverRasterData(group_type=GROUP_TYPE, data_from=READ_DATA_FROM, path=RASTER_PATH)
+    raster = LandCoverRasterData(group_type=GROUP_TYPE, data_from=READ_DATA_FROM, 
+                                 path=RASTER_PATH, scenarios=SCENARIOS)
     raster_data = raster.read_data() 
 
     # Compute Land Cover Statistics
     data = {}
-    lc_statistics = LandCoverStatistics(raster_data, lc_metadata)
+    lc_statistics = LandCoverStatistics(GROUP_TYPE, raster_data, lc_metadata, SCENARIOS)
     try:
         # compute level 1 geometries' values
         print("Level 1 geometries.")
