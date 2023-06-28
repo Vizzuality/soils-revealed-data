@@ -313,30 +313,41 @@ class LandCoverStatistics:
                     for column in ['land_cover_groups', 'land_cover_group_2018']:
                         # sum dictionaries
                         list_dicts = list(df_tmp[column])
-                        result_dict = sum_dicts(list_dicts)           
-                        # sort dictionary
-                        data_tmp[column] = [sort_dict(result_dict)]
+                        all_empty = all(not d for d in list_dicts)
+                        if all_empty:
+                            data_tmp[column] = [{}]
+                        else:
+                            result_dict = sum_dicts(list_dicts)           
+                            # sort dictionary
+                            data_tmp[column] = [sort_dict(result_dict)]
                         
                     # Land cover 
                     list_dicts = list(list(df_tmp['land_cover']))
                     land_cover_dict = {}
-                    for key in list(data_tmp['land_cover_groups'][0].keys()):
-                        filtered_list = [d[key] for d in list_dicts if key in d]
-                        if len(filtered_list) > 1:
-                            result_dict = sum_dicts(filtered_list)
-                            land_cover_dict[key] = sort_dict(result_dict)
-                        else:
-                            land_cover_dict[key] = filtered_list[0]
-                            
-                    data_tmp['land_cover'] = [land_cover_dict]
+                    if data_tmp['land_cover_groups']:
+                        for key in list(data_tmp['land_cover_groups'][0].keys()):
+                            filtered_list = [d[key] for d in list_dicts if key in d]
+                            if len(filtered_list) > 1:
+                                result_dict = sum_dicts(filtered_list)
+                                land_cover_dict[key] = sort_dict(result_dict)
+                            else:
+                                land_cover_dict[key] = filtered_list[0]
+                                
+                        data_tmp['land_cover'] = [land_cover_dict]
+                    else:
+                        data_tmp['land_cover'] = [{}]
                 elif self.group_type == 'future':
                     # Land cover 
                     for column in ['land_cover', 'land_cover_groups']:
                         # sum dictionaries
                         list_dicts = list(df_tmp[column])
-                        result_dict = sum_dicts(list_dicts)           
-                        # sort dictionary
-                        data_tmp[column] = [sort_dict(result_dict)]
+                        all_empty = all(not d for d in list_dicts)
+                        if all_empty:
+                            data_tmp[column] = [{}]
+                        else:
+                            result_dict = sum_dicts(list_dicts)           
+                            # sort dictionary
+                            data_tmp[column] = [sort_dict(result_dict)]
                     
                 df_list.append(pd.DataFrame(data_tmp))
                 
