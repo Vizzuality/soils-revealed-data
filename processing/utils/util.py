@@ -103,8 +103,8 @@ def get_future_lc_statistics(ds, raster_metadata, scenarios):
     # Remove rows where mask is null
     df = df[~df['mask'].isnull()]
     # Remove rows with null or 0 change 
-    df = df[df[scenarios].notnull().all(axis=1)]
-    df = df[(df[scenarios] != 0.0).all(axis=1)]
+    #df = df[df[scenarios].notnull().all(axis=1)]
+    #df = df[(df[scenarios] != 0.0).all(axis=1)]
     ## Add category names
     df = df[['land-cover']+scenarios].rename(columns={'land-cover': 'land_cover'})
     df['land_cover'] = df['land_cover'].astype(int).astype(str)
@@ -132,7 +132,20 @@ def get_future_lc_statistics(ds, raster_metadata, scenarios):
         data[name] = data_tmp  
         
     return data  
-    
+
+
+def shift_lon_coor(multipolygon, delta=-180):
+    updated_polygons = []
+    for polygon in multipolygon.geoms:
+        updated_coords = []
+        coords = list(polygon.exterior.coords)
+        updated_coords = [(lon + delta, lat) for lon, lat in coords]
+        updated_polygon = Polygon(updated_coords)
+        updated_polygons.append(updated_polygon)
+
+    return MultiPolygon(updated_polygons)
+
+
 def split_geometry_with_antimeridian(gdf: gpd.GeoDataFrame):
     # Define the cutting line
     line = LineString([(0, -90), (0, 90)])
@@ -171,7 +184,12 @@ def split_geometry_with_antimeridian(gdf: gpd.GeoDataFrame):
         gdf_list.append(gdf_tmp)
      
     gdf_split = pd.concat(gdf_list)
-    gdf_split = gdf_split.to_crs("EPSG:4326")   
+    
+    multipolygon = gdf_split['geometry'].iloc[1]
+    updated_multipolygon = shift_lon_coor(multipolygon, delta=-180)
+    
+    gdf_split = gdf_split.to_crs("EPSG:4326")  
+    gdf_split['geometry'].iloc[1] = updated_multipolygon
 
     return gdf_split
 

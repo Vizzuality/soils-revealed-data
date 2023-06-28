@@ -238,15 +238,6 @@ class LandCoverStatistics:
             df_list = []
             for index in tqdm(indexes):
                 gdf_index  = gdf[gdf['index'] == index].copy()
-                
-                # Exceptions
-                if (index == 960) and (geom_name == 'political_boundaries_1'):
-                    # Remove small polygons 
-                    gdf_index['geometry'] = remove_small_polygons(gdf_index['geometry'].iloc[0], 0.02)
-                if (index == 6334) and (geom_name == 'hydrological_basins_1'):
-                    # Split the geometry with the antimeridian.
-                    gdf_split = split_geometry_with_antimeridian(gdf_index)
-                    gdf_index = gdf_split.iloc[:1].drop(columns='side')
         
                 # Get bounds
                 geom = gdf_index['geometry'].iloc[0]
