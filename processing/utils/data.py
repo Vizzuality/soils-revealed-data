@@ -92,6 +92,8 @@ class VectorData:
             gdf = gpd.read_file(file_path)
             # Remove rows with None geometries
             gdf = gdf[gdf['geometry'].notnull()]
+            # Remove rows with empty polygons
+            gdf = gdf[~gdf.geometry.is_empty]
             # Make invalid geometries valid
             invalid_geometries = ~gdf['geometry'].is_valid
             if invalid_geometries.any():
