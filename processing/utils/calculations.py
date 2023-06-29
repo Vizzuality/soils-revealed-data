@@ -245,7 +245,7 @@ class LandCoverStatistics:
                 xmin, ymin, xmax, ymax = geom.bounds
                 
                 # Take care of the antimeridian
-                if not round(xmin_180) <= -179 and round(xmax_180) >= 179:
+                if not round(xmin_180) <= -179 and not round(xmax_180) >= 179:
                     if round(xmin) <= -175 and round(xmax) >= 175:
                         # Split the geometry with the antimeridian.
                         gdf_split = split_geometry_with_antimeridian(gdf_index)
