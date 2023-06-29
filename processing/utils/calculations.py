@@ -240,34 +240,42 @@ class LandCoverStatistics:
                 gdf_index  = gdf[gdf['index'] == index].copy()
         
                 # Get bounds
+                xmin_180, ymin, xmax_180, ymax = gdf_index.to_crs("+proj=latlong +datum=WGS84 +lon_0=180")['geometry'].iloc[0].bounds
                 geom = gdf_index['geometry'].iloc[0]
                 xmin, ymin, xmax, ymax = geom.bounds
                 
                 # Take care of the antimeridian
-                if round(xmin) <= -175 and round(xmax) >= 175:
-                    # Split the geometry with the antimeridian.
-                    gdf_split = split_geometry_with_antimeridian(gdf_index)
-                    
-                    ds_list = []
-                    for side in ['left', 'right']:
-                        gdf_side = gdf_split[gdf_split['side'] == side].drop(columns="side")
-                        geom = gdf_side['geometry'].iloc[0]
-                        xmin, ymin, xmax, ymax = geom.bounds
-                        ds_side = self.raster_data.sel(x=slice(xmin, xmax), y=slice(ymax, ymin)) 
+                if not round(xmin_180) <= -179 and round(xmax_180) >= 179:
+                    if round(xmin) <= -175 and round(xmax) >= 175:
+                        # Split the geometry with the antimeridian.
+                        gdf_split = split_geometry_with_antimeridian(gdf_index)
+                        
+                        ds_list = []
+                        for side in ['left', 'right']:
+                            gdf_side = gdf_split[gdf_split['side'] == side].drop(columns="side")
+                            geom = gdf_side['geometry'].iloc[0]
+                            xmin, ymin, xmax, ymax = geom.bounds
+                            ds_side = self.raster_data.sel(x=slice(xmin, xmax), y=slice(ymax, ymin)) 
+                            # Rasterize vector data
+                            ds_list.append(self._rasterize_vector_data(ds_side, 
+                                                                        gdf_side.drop(columns="index").reset_index(),
+                                                                        'index', 'x', 'y'))
+
+                        # Combine the two datasets using combine_by_coords
+                        ds_index = xr.combine_by_coords(ds_list)
+
+                    else:
+                        ds_index = self.raster_data.sel(x=slice(xmin, xmax), y=slice(ymax, ymin)).copy()
                         # Rasterize vector data
-                        ds_list.append(self._rasterize_vector_data(ds_side, 
-                                                                    gdf_side.drop(columns="index").reset_index(),
-                                                                    'index', 'x', 'y'))
-
-                    # Combine the two datasets using combine_by_coords
-                    ds_index = xr.combine_by_coords(ds_list)
-
+                        ds_index = self._rasterize_vector_data(ds_index, 
+                                                                        gdf_index.drop(columns="index").reset_index(), 
+                                                                        'index', 'x', 'y')
                 else:
-                    ds_index = self.raster_data.sel(x=slice(xmin, xmax), y=slice(ymax, ymin)).copy()
-                    # Rasterize vector data
-                    ds_index = self._rasterize_vector_data(ds_index, 
-                                                                    gdf_index.drop(columns="index").reset_index(), 
-                                                                    'index', 'x', 'y')
+                        ds_index = self.raster_data.sel(x=slice(xmin, xmax), y=slice(ymax, ymin)).copy()
+                        # Rasterize vector data
+                        ds_index = self._rasterize_vector_data(ds_index, 
+                                                                        gdf_index.drop(columns="index").reset_index(), 
+                                                                        'index', 'x', 'y')
                 # Filter by geometry
                 ds_index = ds_index.where(ds_index['mask'].isin(index))                
                 
