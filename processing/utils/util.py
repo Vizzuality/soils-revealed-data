@@ -227,9 +227,9 @@ def sum_two_dicts(dict1, dict2):
 def sum_dicts(list_dicts):
     for n in range(len(list_dicts)-1):
         if n == 0:
-                result_dict = sum_two_dicts(list_dicts[n], list_dicts[n+1])
+            result_dict = sum_two_dicts(list_dicts[n], list_dicts[n+1])
         else:
-                result_dict = sum_two_dicts(result_dict, list_dicts[n+1])
+            result_dict = sum_two_dicts(result_dict, list_dicts[n+1])
                 
     return result_dict
 

@@ -317,7 +317,10 @@ class LandCoverStatistics:
                         if all_empty:
                             data_tmp[column] = [{}]
                         else:
-                            result_dict = sum_dicts(list_dicts)           
+                            if len(list_dicts) > 1:
+                                result_dict = sum_dicts(list_dicts) 
+                            else:
+                                result_dict = list_dicts[0]          
                             # sort dictionary
                             data_tmp[column] = [sort_dict(result_dict)]
                         
@@ -345,7 +348,10 @@ class LandCoverStatistics:
                         if all_empty:
                             data_tmp[column] = [{}]
                         else:
-                            result_dict = sum_dicts(list_dicts)           
+                            if len(list_dicts) > 1:
+                                result_dict = sum_dicts(list_dicts)   
+                            else:
+                                result_dict = list_dicts[0]        
                             # sort dictionary
                             data_tmp[column] = [sort_dict(result_dict)]
                     
