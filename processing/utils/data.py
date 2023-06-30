@@ -62,7 +62,7 @@ class LandCoverRasterData:
 
             # Read future dataset
             group = 'future'
-            for scenario in self.scenarios:
+            for n, scenario in enumerate(self.scenarios):
                 if self.data_from == 's3':
                     ds_future = read_zarr_from_s3(access_key_id = os.getenv("S3_ACCESS_KEY_ID"), 
                                         secret_accsess_key = os.getenv("S3_SECRET_ACCESS_KEY"),
@@ -71,11 +71,10 @@ class LandCoverRasterData:
                     ds_future = read_zarr_from_local_dir(path=os.path.join(self.path, scenario+'.zarr'), group = group)
                     
                 ds_future = ds_future.drop_dims('depth').sel(time=['2018-12-31T00:00:00.000000000', '2038-12-31T00:00:00.000000000'])
-                    
+  
                 ds[scenario] = ds_future['stocks'].isel(time=1) - \
                     ds_future['stocks'].isel(time=0)
-        
-
+                    
         return ds
     
     
