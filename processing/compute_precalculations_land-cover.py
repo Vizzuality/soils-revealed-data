@@ -11,15 +11,15 @@ from utils.calculations import LandCoverStatistics
 load_dotenv()
 
 # VARIABLEs
+FOLDER_PATH = '../data/processed/precalculations/'  
 RASTER_PATH = '../data/processed/raster_data/'
 VECTOR_PATH = '../data/processed/vector_data/'
-VECTOR_PREFIXES = ['political_boundaries']
+VECTOR_PREFIXES = ['political_boundaries', 'hydrological_basins', 'biomes', 'landforms']
 SCENARIOS = ['crop_I', 'crop_MG', 'crop_MGI', 'grass_part', 'grass_full', 'rewilding', 'degradation_ForestToGrass', 'degradation_ForestToCrop', 'degradation_NoDeforestation']
-SCENARIOS = None
-READ_DATA_FROM = 'local_dir'
+#SCENARIOS = None
+READ_DATA_FROM = 's3'#local_dir'
 VARIABLE = 'stocks'
-GROUP_TYPE = 'recent'
-
+GROUP_TYPE = 'future'#'recent'
 
 def main():
     # Start distributed scheduler locally
@@ -60,9 +60,33 @@ def main():
         df = df.sort_values(['id_0', 'id'])
         df['variable'] = VARIABLE
         df['group_type'] = GROUP_TYPE
-        df.to_csv(f"../data/processed/precalculations/{geom_type}_land_cover_{GROUP_TYPE}.csv", index=False)
+        df.to_csv(f"{FOLDER_PATH}{geom_type}_land_cover_{GROUP_TYPE}.csv", index=False)
         
     client.close()
+    
+    # Concatenate datasets
+    # Get the list of files in the folder
+    files = os.listdir(FOLDER_PATH)
+    # Iterate over the files and extract the prefix
+    data_frames = {}
+    for file in files:
+        if "land_cover" in file:
+            prefix = file.split("_land_cover")[0]
+            if prefix not in data_frames:
+                data_frames[prefix] = []
+            data_frames[prefix].append(file)
+    # Concatenate and save the data frames for each prefix
+    for prefix, files in data_frames.items():
+        dfs = []
+        for file in files:
+            file_path = os.path.join(FOLDER_PATH, file)
+            df = pd.read_csv(file_path)
+            dfs.append(df)
+        concatenated_df = pd.concat(dfs)
+        
+        concatenated_df.sort_values(['id_0', 'id'])
+        output_file = prefix + "_land_cover.csv"
+        concatenated_df.to_csv(os.path.join(FOLDER_PATH, output_file), index=False)
     
     
 if __name__ == '__main__':
