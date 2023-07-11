@@ -3,56 +3,67 @@ Soils Revealed Data
 
 This folder outlines data processes for the Soils Revealed project.
 
-Project Organization
-------------
-
-``` txt
-├── LICENSE                       <- The LICENSE using this project.
-├── README.md                     <- The top-level README for developers using this project.
-├── CHANGELOG.md                  <- The top-level CHANGELOG for developers using this project.
-├── env.default                   <- Environment vars definition
-├── Makefile                      <- Makefile with commands
-├──.editorconfig                  <- Helps maintain consistent coding styles
-├──.pre-commit-config             <- Helps setup github basic precommit hooks
-├── docker-compose.yml            <- Docker configs environment definition
-├── .gitignore                    <- files don't want to copy in githubs
-├── .github                       <- github configs
-│   └── templates                 <- github templates for issues and pull requests
-├── data
-│   ├── processed                 <- The final, canonical data sets.
-│   └── raw                       <- The original data.
-├── processing
-└── notebooks                     <- Naming convention is a number (for ordering),
-    │                                the creator's initials, and a short `-` delimited e.g.
-    │                                `1.0-jqp-initial-data-exploration`.
-    ├──.dockerignore
-    ├──environment.conda-lock.yaml<- Notebook env.lock that will be used to quick install dependencies
-    ├──package.yaml               <- Notebooks requirements base on conda env
-    ├──Dockerfile                 <- Sets up Jupyter notebooks environment
-    ├──jupyter_server_config.py   <- Configure Jupyter notebooks
-    ├──template_notebooks         <- where the notebooks template will live.
-    │
-    ├──Lab                        <- Testing and development
-    │
-    └──Final                      <- The final cleaned notebooks for reports/ designers /
-                                     developers etc.
-
-```
-
 --------
 
-## Steps for use:
+## Setup
 
-#### Setup one of your environments
+### The environment
+To run the notebooks you need to create an environment with the dependencies. There are two options:
+#### Docker
 
-- With [docker]() and [docker-compose]() in your system, you can develop inside containers:
+If you have [docker](https://docs.docker.com/engine/install/) in your system, 
+you run a jupyter lab server with:
+
 ``` bash
-make up
+docker compose up --build
 ```
-And if you want to get into the main container:
+
+And if you want to get into the container, use a terminal in jupyter lab, 
+vscode remote development or run this command:
+
+```shell
+docker exec -it soils_revealed_notebooks /bin/bash
+```
+
+#### Conda environment
+
+Create the environment with:
+
 ``` bash
-make inside
+mamba env create -n soils-revealed -f environment.yml
 ```
+This will create an environment called soils-revealed with a common set of dependencies.
+
+### `git` (if needed) and pre-commit hooks
+
+If this project is a new and standalone (not a module in a bigger project), you need to initialize git:
+
+``` bash
+git init
+```
+
+If the project is already in a git repository, you can skip this step.
+
+To install the **pre-commit hooks**, with the environment activated and in the project root directory, run:
+
+``` bash
+pre-commit install
+```
+
+## Update the environment
+
+If you need to update the environment installing a new package, you simply do it with:
+
+``` bash
+mamba install [package]  # or `pip install [package]` if you want to install it via pip
+```
+
+then update the environment.yml file so others can clone your environment with:
+
+``` bash
+mamba env export --no-builds -f environment.yml
+```
+
 ------------
 ## Datasets
 
@@ -79,4 +90,3 @@ python compute_precalculations.py \
 experimental,global,scenarios \
 political_boundaries,hydrological_basins,biomes,landforms
 ```
-<p><small>Project based on the <a target="_blank" href="https://drivendata.github.io/cookiecutter-data-science/">cookiecutter data science project template</a>. #cookiecutterdatascience</small></p>
