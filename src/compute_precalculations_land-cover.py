@@ -1,4 +1,5 @@
 import os 
+import ast
 
 import pandas as pd
 from dotenv import load_dotenv
@@ -6,6 +7,7 @@ from dask.distributed import Client
 
 from utils.data import VectorData, LandCoverData, LandCoverRasterData
 from utils.calculations import LandCoverStatistics
+from utils.util import multiply_dict_values
 
 # Load .env VARIABLEs
 load_dotenv()
@@ -20,6 +22,7 @@ SCENARIOS = ['crop_I', 'crop_MG', 'crop_MGI', 'grass_part', 'grass_full', 'rewil
 READ_DATA_FROM = 's3'#local_dir'
 VARIABLE = 'stocks'
 GROUP_TYPE = 'future'#'recent'
+PIX_HA = 6.25
 
 def main():
     # Start distributed scheduler locally
@@ -63,6 +66,45 @@ def main():
         df.to_csv(f"{FOLDER_PATH}{geom_type}_land_cover_{GROUP_TYPE}.csv", index=False)
         
     client.close()
+
+    # Multiply values with PIX_HA
+    # Get the list of files in the folder
+    files = os.listdir(FOLDER_PATH)
+    # Iterate over the files and extract the prefix
+    data_frames = {}
+    for file in files:
+        if "land_cover" in file:
+            prefix = file.split("_land_cover")[0]
+            if prefix not in data_frames:
+                data_frames[prefix] = []
+            data_frames[prefix].append(file)
+
+    for prefix, files in data_frames.items():
+        for file in files:
+            file_path = os.path.join(FOLDER_PATH, file)
+            df = pd.read_csv(file_path)
+            multiply_values = lambda dictionary: {key: {nested_key: value * PIX_HA for nested_key, value in nested_dict.items()} for key, nested_dict in ast.literal_eval(dictionary).items()}
+
+            if 'recent' in file:
+                df = df[~pd.isna(df['land_cover_groups'])]
+                if 'featurecla' in df.columns:
+                    df = df[~pd.isna(df['featurecla'])]
+                # Use map and lambda to update the column
+                df['land_cover_groups'] = df['land_cover_groups'].map(multiply_values)
+                df['land_cover_group_2018'] = df['land_cover_group_2018'].map(multiply_values)
+                # Use apply to update the column
+                df['land_cover'] = df['land_cover'].apply(lambda x: multiply_dict_values(ast.literal_eval(x), PIX_HA))
+            elif 'future' in file:
+                df = df[~pd.isna(df['land_cover_groups'])]
+                if 'featurecla' in df.columns:
+                    df = df[~pd.isna(df['featurecla'])]
+                # Use map and lambda to update the column
+                df['land_cover_groups'] = df['land_cover_groups'].map(multiply_values)
+                # Use apply to update the column
+                df['land_cover'] = df['land_cover'].apply(lambda x: multiply_dict_values(ast.literal_eval(x), PIX_HA))
+
+            df.to_csv(file_path, index=False)
+
     
     # Concatenate datasets
     # Get the list of files in the folder

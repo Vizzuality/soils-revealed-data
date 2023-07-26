@@ -13,6 +13,15 @@ from shapely.geometry import LineString, Polygon, MultiPolygon
 load_dotenv()
 
 
+def multiply_dict_values(dictionary, factor):
+    for key, value in dictionary.items():
+        if isinstance(value, dict):
+            dictionary[key] = multiply_dict_values(value, factor)
+        else:
+            dictionary[key] = value * factor
+    return dictionary
+
+
 def read_zarr_from_s3(access_key_id, secret_accsess_key, dataset, group=None):
     # AWS S3 path
     s3_path = f's3://soils-revealed/{dataset}.zarr'
